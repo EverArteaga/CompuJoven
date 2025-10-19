@@ -1,13 +1,16 @@
-
 package compujoven;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class CompuJoven {
 
-    // Estos son los datos que vamos a usar pero solo para la clase Joven
+    // Constantes para los nombres de los archivos de persistencia
+    private static final String ARCHIVO_JOVENES = "jovenes.txt";
+    private static final String ARCHIVO_EMPRESAS = "empresas.txt";
+    private static final String ARCHIVO_VACANTES = "vacantes.txt";
 
     // Clase Joven 
     public static class Joven {
@@ -71,6 +74,7 @@ public class CompuJoven {
         public String getNit() { return nit; }
         public String getEmail() { return email; }
         public String getContrasena() { return contrasena; }
+        public String getContacto() { return contacto; } // Se necesita para el guardado
         
         @Override
         public String toString() {
@@ -99,10 +103,26 @@ public class CompuJoven {
             this.nombreEmpresa = nombreEmpresa;
             this.requisitosEdad = requisitosEdad;
         }
+        
+        // Constructor usado para la carga desde archivo, donde el ID ya existe
+        public Vacante(int id, String titulo, String descripcion, String nombreEmpresa, String requisitosEdad) {
+            this.id = id;
+            this.titulo = titulo;
+            this.descripcion = descripcion;
+            this.nombreEmpresa = nombreEmpresa;
+            this.requisitosEdad = requisitosEdad;
+        }
+        
+        // Setter para actualizar el contador después de la carga
+        public static void setContadorVacantes(int nuevoContador) {
+            contadorVacantes = nuevoContador;
+        }
 
         public int getId() { return id; }
         public String getTitulo() { return titulo; }
         public String getNombreEmpresa() { return nombreEmpresa; }
+        public String getDescripcion() { return descripcion; } // Necesario para el guardado
+        public String getRequisitosEdad() { return requisitosEdad; } // Necesario para el guardado
 
         @Override
         public String toString() {
@@ -116,8 +136,6 @@ public class CompuJoven {
     }
 
 
-    // Intento 4 de la logica de este programa (Empiezo a creer que el error soy yo)
-    
     // Almacenamiento de datos
     private static List<Joven> listaJovenes = new ArrayList<>();
     private static List<Empresa> listaEmpresas = new ArrayList<>();
@@ -130,7 +148,10 @@ public class CompuJoven {
 
     // Metodo Main
     public static void main(String[] args) {
-        cargarDatosIniciales();
+        // --- INICIO DE CARGA DE DATOS PERSISTENTES 
+        //(tanto la clase Joven como Empresa y Vacante todo se hizo solo con guardado dr txt porque no eh podido con .JSON) ---
+        cargarDatosDesdeArchivos(); 
+        // ---------------------------------------------
         
         System.out.println("==============================================");
         System.out.println("  Bienvenido al Portal de Empleos CompuJoven ");
@@ -146,6 +167,162 @@ public class CompuJoven {
             }
         }
     }
+
+   //Esto es el metodo de persistencia. Basicamente es para cargar y lo mas importamente lo que se nesecita GUARDAR pues lo que viene siendo el registro de usuarios
+    // --- JOVEN ---
+    private static void guardarJovenes() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(ARCHIVO_JOVENES))) {
+            for (Joven j : listaJovenes) {
+                // Formato: nombre|documento|edad|peso|email|contrasena
+                String linea = j.getNombre() + "|" + j.getDocumentoIdentidad() + "|" 
+                             + j.getEdad() + "|" + j.getPeso() + "|" 
+                             + j.getEmail() + "|" + j.getContrasena();
+                pw.println(linea);
+            }
+        } catch (IOException e) {
+            System.err.println("️ Error al guardar jovenes: " + e.getMessage());
+        }
+    }
+
+    private static void cargarJovenes() {
+        listaJovenes.clear(); 
+        try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO_JOVENES))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] datos = linea.split("\\|"); 
+                if (datos.length == 6) { 
+                    try {
+                        String nombre = datos[0];
+                        String documentoIdentidad = datos[1];
+                        int edad = Integer.parseInt(datos[2]);
+                        double peso = Double.parseDouble(datos[3]);
+                        String email = datos[4];
+                        String contrasena = datos[5];
+                        listaJovenes.add(new Joven(nombre, documentoIdentidad, edad, peso, email, contrasena));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error de formato numérico en linea (Joven): " + linea);
+                    }
+                }
+            }
+        } catch (FileNotFoundException ignored) {
+            // Es normal la primera ejecución, no hacemos nada
+        } catch (IOException e) {
+            System.err.println("️ Error de lectura al cargar jovenes: " + e.getMessage());
+        }
+    }
+    
+    // --- EMPRESA ---
+    private static void guardarEmpresas() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(ARCHIVO_EMPRESAS))) {
+            for (Empresa e : listaEmpresas) {
+                // Formato: nombre|nit|contacto|email|contrasena
+                String linea = e.getNombre() + "|" + e.getNit() + "|" 
+                             + e.getContacto() + "|" + e.getEmail() + "|" 
+                             + e.getContrasena();
+                pw.println(linea);
+            }
+        } catch (IOException e) {
+            System.err.println("️ Error al guardar empresas: " + e.getMessage());
+        }
+    }
+
+    private static void cargarEmpresas() {
+        listaEmpresas.clear(); 
+        try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO_EMPRESAS))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] datos = linea.split("\\|"); 
+                if (datos.length == 5) { 
+                    String nombre = datos[0];
+                    String nit = datos[1];
+                    String contacto = datos[2];
+                    String email = datos[3];
+                    String contrasena = datos[4];
+                    listaEmpresas.add(new Empresa(nombre, nit, contacto, email, contrasena));
+                }
+            }
+        } catch (FileNotFoundException ignored) {
+            // Es normal la primera ejecución, no hacemos nada
+        } catch (IOException e) {
+            System.err.println("️ Error de lectura al cargar empresas: " + e.getMessage());
+        }
+    }
+    
+    // --- VACANTE ---
+    private static void guardarVacantes() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(ARCHIVO_VACANTES))) {
+            for (Vacante v : listaVacantes) {
+                // Formato: id|titulo|descripcion|nombreEmpresa|requisitosEdad
+                String linea = v.getId() + "|" + v.getTitulo() + "|" 
+                             + v.getDescripcion() + "|" + v.getNombreEmpresa() + "|" 
+                             + v.getRequisitosEdad();
+                pw.println(linea);
+            }
+        } catch (IOException e) {
+            System.err.println("️ Error al guardar vacantes: " + e.getMessage());
+        }
+    }
+
+    private static void cargarVacantes() {
+        listaVacantes.clear(); 
+        int maxId = 0; // Usado para actualizar el contador estático
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(ARCHIVO_VACANTES))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] datos = linea.split("\\|"); 
+                if (datos.length == 5) { 
+                    try {
+                        int id = Integer.parseInt(datos[0]);
+                        String titulo = datos[1];
+                        String descripcion = datos[2];
+                        String nombreEmpresa = datos[3];
+                        String requisitosEdad = datos[4];
+                        
+                        // Usamos el constructor con ID para recrear la vacante
+                        listaVacantes.add(new Vacante(id, titulo, descripcion, nombreEmpresa, requisitosEdad));
+                        
+                        if (id > maxId) {
+                            maxId = id;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error de formato numerico en linea (Vacante): " + linea);
+                    }
+                }
+            }
+            // MUY IMPORTANTE: Actualizar el contador estático para evitar IDs duplicados
+            Vacante.setContadorVacantes(maxId); 
+        } catch (FileNotFoundException ignored) {
+            // Es normal la primera ejecución, no hacemos nada
+        } catch (IOException e) {
+            System.err.println("️ Error de lectura al cargar vacantes: " + e.getMessage());
+        }
+    }
+    
+    
+    // --- MÉTODOS DE CONSOLIDACIÓN ---
+    
+    private static void cargarDatosDesdeArchivos() {
+        cargarJovenes();
+        cargarEmpresas(); 
+        cargarVacantes();
+        
+        // Si no se cargó nada desde los archivos, usamos los datos de prueba iniciales
+        if (listaJovenes.isEmpty() && listaEmpresas.isEmpty() && listaVacantes.isEmpty()) {
+            System.out.println(" No se encontraron datos guardados. Cargando datos iniciales de prueba.");
+            cargarDatosIniciales();
+        } else {
+            System.out.println(" Datos cargados correctamente. Listo para trabajar!");
+        }
+    }
+    
+    private static void guardarDatosEnArchivos() {
+        guardarJovenes();
+        guardarEmpresas();
+        guardarVacantes();
+        System.out.println("� Todos los datos guardados antes de salir.");
+    }
+    
 
     // Aqui pondre todos los Menus
 
@@ -164,8 +341,10 @@ public class CompuJoven {
                 case 1: menuRegistro(); break;
                 case 2: iniciarSesion(); break;
                 case 3:
+                    // --- PUNTO DE GUARDADO AL SALIR ---
+                    guardarDatosEnArchivos(); 
+                    // ----------------------------------
                     System.out.println("Gracias por usar CompuJoven. Hasta pronto!");
-                    System.out.println("SOMOS LA MONDAAA");
                     System.exit(0);
                     break;
                 default: System.out.println("Opcion no es valida. Intente de nuevo :D");
@@ -270,10 +449,10 @@ public class CompuJoven {
                 edad = scanner.nextInt();
                 scanner.nextLine();
                 if (edad < 16 || edad > 22) {
-                    System.out.println("🚫 Edad fuera del rango permitido (16-22 anios).");
+                    System.out.println(" Edad fuera del rango permitido (16-22 anios).");
                 }
             } catch (Exception e) {
-                System.out.println("🚫 Entrada invalida para la edad.");
+                System.out.println(" Entrada invalida para la edad.");
                 scanner.nextLine();
             }
         }
@@ -285,10 +464,10 @@ public class CompuJoven {
                 peso = scanner.nextDouble();
                 scanner.nextLine();
                 if (peso <= 0) {
-                    System.out.println("🚫 El peso debe ser un valor positivo.");
+                    System.out.println(" El peso debe ser un valor positivo.");
                 }
             } catch (Exception e) {
-                System.out.println("🚫 Entrada invalida para el peso.");
+                System.out.println(" Entrada invalida para el peso.");
                 scanner.nextLine();
             }
         }
@@ -301,7 +480,7 @@ public class CompuJoven {
         
         Joven nuevoJoven = new Joven(nombre, documento, edad, peso, email, contrasena);
         listaJovenes.add(nuevoJoven);
-        System.out.println("✅ ¡Registro de Joven exitoso! Bienvenido a CompuJoven.");
+        System.out.println(" Registro de Joven exitoso! Bienvenido a CompuJoven.");
     }
     
     private static void registrarEmpresa() {
@@ -323,7 +502,7 @@ public class CompuJoven {
 
         Empresa nuevaEmpresa = new Empresa(nombre, nit, contacto, email, contrasena);
         listaEmpresas.add(nuevaEmpresa);
-        System.out.println("✅ ¡Registro de Empresa exitoso! Ya puede publicar vacantes.");
+        System.out.println(" Registro de Empresa exitoso! Ya puede publicar vacantes.");
     }
     
     private static void iniciarSesion() {
@@ -337,7 +516,7 @@ public class CompuJoven {
         for (Joven j : listaJovenes) {
             if (j.getEmail().equals(email) && j.getContrasena().equals(contrasena)) {
                 jovenLogueado = j;
-                System.out.println("🎉 ¡Bienvenido, " + j.getNombre() + "! Has iniciado sesion como Joven.");
+                System.out.println(" Bienvenido, " + j.getNombre() + " Has iniciado sesion como Joven.");
                 return;
             }
         }
@@ -346,7 +525,7 @@ public class CompuJoven {
         for (Empresa e : listaEmpresas) {
             if (e.getEmail().equals(email) && e.getContrasena().equals(contrasena)) {
                 empresaLogueada = e;
-                System.out.println("🏢 ¡Bienvenido, " + e.getNombre() + "! Has iniciado sesion como Empresa.");
+                System.out.println(" Bienvenido, " + e.getNombre() + " Has iniciado sesion como Empresa.");
                 return;
             }
         }
@@ -370,9 +549,10 @@ public class CompuJoven {
         // El nombre de la empresa se toma del usuario logueado
         String nombreEmpresa = empresaLogueada.getNombre();
         
+        // Usa el constructor original (el que auto-incrementa el ID)
         Vacante nuevaVacante = new Vacante(titulo, descripcion, nombreEmpresa, requisitosEdad);
         listaVacantes.add(nuevaVacante);
-        System.out.println("✅ ¡Vacante publicada con exito! ID: " + nuevaVacante.getId());
+        System.out.println(" Vacante publicada con exito! ID: " + nuevaVacante.getId());
     }
     
     private static void verMisVacantes() {
@@ -425,23 +605,21 @@ public class CompuJoven {
             if (vacanteSeleccionada != null) {
                 // Simulacion de como seria la postulacion para una vacante
                 System.out.println("---------------------------------");
-                System.out.println("⭐ Aplicando a: " + vacanteSeleccionada.getTitulo() + " (" + vacanteSeleccionada.getNombreEmpresa() + ")");
+                System.out.println(" Aplicando a: " + vacanteSeleccionada.getTitulo() + " (" + vacanteSeleccionada.getNombreEmpresa() + ")");
                 System.out.println("Su perfil (Edad: " + jovenLogueado.getEdad() + ", Peso: " + String.format("%.2f", jovenLogueado.getPeso()) + "kg) ha sido enviado.");
-                System.out.println("✅ ¡Aplicacion exitosa! La empresa recibira sus datos.");
+                System.out.println(" Aplicacion exitosa! La empresa recibira sus datos.");
                 System.out.println("---------------------------------");
             } else {
-                System.out.println("❌ ID de vacante no encontrado.");
+                System.out.println(" ID de vacante no encontrado.");
             }
 
         } else {
-            System.out.println("Entrada invalida. Debe ser un número.");
+            System.out.println("Entrada invalida. Debe ser un numero.");
             scanner.nextLine();
         }
     }
     
     // Estos datos son para probar que funcionen las vacantes
-    // pero pero se podrian dejar y solo hariamos 1 o 2 para mostrar como funciona la creacion a los profesores en la presentacion
-    
     private static void cargarDatosIniciales() {
         // Joven de prueba
         listaJovenes.add(new Joven("Pedro Perez", "1001123456", 19, 70.5, "pedro@mail.com", "123"));
